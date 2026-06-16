@@ -31,6 +31,36 @@ app-template:
               pathType: Prefix
               service:
                 identifier: app
+        - host: &host-ext songbird-fw.com
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: app
+        - host: &host-ext www.songbird-fw.org
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: app
+        - host: &host-ext songbird-fw.org
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: app
+        - host: &host-ext www.songbird-fw.net
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: app
+        - host: &host-ext songbird-fw.net
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: app
   configMaps:
     index:
       annotations:
