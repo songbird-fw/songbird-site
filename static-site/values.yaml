@@ -44,7 +44,7 @@ app-template:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Songbird — The GitOps Firewall</title>
-            <meta name="description" content="Songbird is an open source GitOps firewall project focused on enterprise-grade power, accessibility, and simplicity for everyone.">
+            <meta name="description" content="Songbird is an open source GitOps firewall project focused on enterprise-grade power, speed, and simplicity for everyone.">
             <meta name="color-scheme" content="dark light">
             <meta property="og:title" content="Songbird — The GitOps Firewall">
             <meta property="og:description" content="An open source firewall project designed to bring enterprise-grade power and simple operations to everyone.">
@@ -450,7 +450,7 @@ app-template:
               <section class="hero" id="top" aria-labelledby="hero-heading">
                 <div class="container hero-grid">
                   <div>
-                    <span class="eyebrow" aria-label="Project status">Open source · Accessible · GitOps-native</span>
+                    <span class="eyebrow" aria-label="Project status">Open source · Fast · GitOps-native</span>
                     <h1 id="hero-heading">Enterprise firewall power, built for everyone.</h1>
                     <p class="hero-lead">Songbird closes the gap between difficult community firewalls and expensive enterprise platforms — delivering strong capabilities, clean GitOps operations, and an interface that does not require specialist knowledge.</p>
                     <div class="cta-row">
@@ -491,8 +491,8 @@ app-template:
                       <p>Powerful firewall capabilities should remain available to everyone — not only to teams with enterprise budgets. The project is released as open source software for this reason.</p>
                     </article>
                     <article class="panel">
-                      <h3>Accessible by design</h3>
-                      <p>Keyboard navigation, assistive technology support, responsive layouts, and readable interfaces are part of the product from day one — not retrofitted later.</p>
+                      <h3>Fast by design</h3>
+                      <p>Built on top of eBPF to get filtering speed even with commodity hardware.</p>
                     </article>
                   </div>
                 </div>
@@ -545,9 +545,9 @@ app-template:
                     <article class="panel">
                       <h3>User-first security</h3>
                       <ul>
-                        <li>Accessible interactions for keyboard and assistive technology users.</li>
+                        <li>Clean and fast UI.</li>
                         <li>Responsive layouts that work on phones, tablets, and desktops.</li>
-                        <li>Readable interfaces that favor understanding over ceremony.</li>
+                        <li>Simple to understand and to operate.</li>
                       </ul>
                     </article>
                   </div>
