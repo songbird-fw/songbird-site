@@ -1,0 +1,11 @@
+# Traefik: 301 from http:// to https://. Safe behind Cloudflare because the zone is in
+# Full mode (the origin sees X-Forwarded-Proto=https for HTTPS visitors); in Flexible
+# mode this would loop. The ACME HTTP-01 solver uses its own Ingress and is not affected.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: songbird-site
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: songbird-site
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: songbird-site
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: nginx
+          # nginxinc/nginx-unprivileged:1.31.7-alpine — listens on 8080 as uid 101, no root anywhere
+          image: nginxinc/nginx-unprivileged:1.31.7-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 10m, memory: 24Mi }
+            limits: { memory: 64Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+          volumeMounts:
+            - { name: html,   mountPath: /usr/share/nginx/html, readOnly: true }
+            - { name: assets, mountPath: /usr/share/nginx/html/assets, readOnly: true }
+            - { name: fonts,  mountPath: /usr/share/nginx/html/assets/fonts, readOnly: true }
+            - { name: conf,   mountPath: /etc/nginx/conf.d, readOnly: true }
+            - { name: tmp,    mountPath: /tmp }
+      volumes:
+        - name: html
+          configMap: { name: site-html }
+        - name: assets
+          configMap: { name: site-assets }
+        - name: fonts
+          configMap: { name: site-fonts }
+        - name: conf
+          configMap: { name: nginx-conf }
+        - name: tmp
+          emptyDir: { sizeLimit: 32Mi }
