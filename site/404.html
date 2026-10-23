@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Not found — Songbird</title>
+  <meta name="robots" content="noindex">
+  <style>
+    @font-face{font-family:'Zilla Slab';font-weight:700;font-display:swap;src:url(/assets/fonts/ZillaSlab-700.woff2) format('woff2');}
+    @font-face{font-family:'Red Hat Mono';font-weight:300 700;font-display:swap;src:url(/assets/fonts/RedHatMono.woff2) format('woff2');}
+    html{color-scheme:light}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:oklch(0.965 0.006 320);color:oklch(0.24 0.03 280);font-family:'Zilla Slab',Georgia,serif;padding:2rem}
+    main{max-width:40rem}
+    h1{font-size:clamp(2.2rem,1.5rem+3vw,4rem);line-height:1.05;margin:0 0 1rem;color:oklch(0.21 0.035 280)}
+    pre{font-family:'Red Hat Mono',ui-monospace,monospace;background:oklch(0.21 0.035 280);color:oklch(0.95 0.01 300);padding:1.25rem 1.5rem;border-radius:4px;font-size:0.95rem;line-height:1.5;overflow-x:auto}
+    pre b{color:oklch(0.86 0.09 335);font-weight:400}
+    a{color:oklch(0.50 0.23 335)}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>No RuleSet matches this path.</h1>
+    <pre><b>- name: "not-found"</b>
+<b>  destination: ["this-url"]</b>
+<b>  action: "drop"</b>
+<b>  log: "all"</b></pre>
+    <p>Default deny applies to URLs too. <a href="/">Back to songbird-fw.org</a> or <a href="https://github.com/songbird-fw/songbird-fw">the repository</a>.</p>
+  </main>
+</body>
+</html>

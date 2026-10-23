@@ -1,0 +1,39 @@
+# Deploy with:  kubectl apply -k .
+# The site files are turned into ConfigMaps here; the generated name suffix changes with the
+# content, so every content change rolls the Deployment automatically.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: songbird-site
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: songbird
+resources:
+  - deploy/namespace.yaml
+  - deploy/deployment.yaml
+  - deploy/service.yaml
+  - deploy/ingress.yaml
+  - deploy/middleware-redirect-https.yaml
+configMapGenerator:
+  - name: site-html
+    files:
+      - site/index.html
+      - site/404.html
+      - site/robots.txt
+  - name: site-assets
+    files:
+      - site/assets/songbird-mark.png
+      - site/assets/icon-32.png
+      - site/assets/icon-192.png
+      - site/assets/icon-512.png
+      - site/assets/og.jpg
+  - name: site-fonts
+    files:
+      - site/assets/fonts/ZillaSlab-400.woff2
+      - site/assets/fonts/ZillaSlab-400i.woff2
+      - site/assets/fonts/ZillaSlab-600.woff2
+      - site/assets/fonts/ZillaSlab-700.woff2
+      - site/assets/fonts/RedHatMono.woff2
+  - name: nginx-conf
+    files:
+      - deploy/nginx/default.conf
+      - deploy/nginx/security-headers.conf

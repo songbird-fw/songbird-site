@@ -1,0 +1,76 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: songbird-site
+  annotations:
+    # cert-manager issues ONE certificate with all six names (see cluster/clusterissuer-letsencrypt.yaml)
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    # <namespace>-<middleware>@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: songbird-site-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - secretName: songbird-fw-tls
+      hosts:
+        - songbird-fw.org
+        - www.songbird-fw.org
+        - songbird-fw.com
+        - www.songbird-fw.com
+        - songbird-fw.net
+        - www.songbird-fw.net
+  rules:
+    - host: songbird-fw.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: songbird-site
+                port: { name: http }
+    - host: www.songbird-fw.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: songbird-site
+                port: { name: http }
+    - host: songbird-fw.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: songbird-site
+                port: { name: http }
+    - host: www.songbird-fw.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: songbird-site
+                port: { name: http }
+    - host: songbird-fw.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: songbird-site
+                port: { name: http }
+    - host: www.songbird-fw.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: songbird-site
+                port: { name: http }

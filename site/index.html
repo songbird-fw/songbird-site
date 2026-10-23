@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Songbird — a firewall you review like code</title>
+  <meta name="description" content="Songbird is an open-source network firewall for Linux: YAML policy in Git, an eBPF/XDP data plane, default deny by design. Design phase, AGPL-3.0.">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#12142b">
+  <link rel="canonical" href="https://songbird-fw.org/">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://songbird-fw.org/">
+  <meta property="og:title" content="Songbird — a firewall you review like code">
+  <meta property="og:description" content="Open-source network firewall for Linux. Policy is YAML in Git, the data plane is eBPF, every change is a reviewed commit. Design phase.">
+  <meta property="og:image" content="https://songbird-fw.org/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="assets/fonts/ZillaSlab-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/ZillaSlab-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/RedHatMono.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    /* ───────────────────────── fonts (self-hosted, latin) ───────────────────────── */
+    @font-face{font-family:'Zilla Slab';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/ZillaSlab-400.woff2) format('woff2');}
+    @font-face{font-family:'Zilla Slab';font-style:italic;font-weight:400;font-display:swap;src:url(assets/fonts/ZillaSlab-400i.woff2) format('woff2');}
+    @font-face{font-family:'Zilla Slab';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/ZillaSlab-600.woff2) format('woff2');}
+    @font-face{font-family:'Zilla Slab';font-style:normal;font-weight:700;font-display:swap;src:url(assets/fonts/ZillaSlab-700.woff2) format('woff2');}
+    @font-face{font-family:'Red Hat Mono';font-style:normal;font-weight:300 700;font-display:swap;src:url(assets/fonts/RedHatMono.woff2) format('woff2');}
+
+    /* ───────────────────────── tokens (see design/DESIGN.md) ───────────────────────── */
+    :root {
+      color-scheme: light;
+      --page:        oklch(0.965 0.006 320);
+      --page-deep:   oklch(0.93 0.01 320);
+      --ink:         oklch(0.21 0.035 280);
+      --ink-2:       oklch(0.27 0.04 280);
+      --ink-text:    oklch(0.24 0.03 280);
+      --muted:       oklch(0.42 0.025 290);
+      --rule:        oklch(0.84 0.012 310);
+      --magenta:     oklch(0.60 0.26 335);
+      --magenta-ink: oklch(0.50 0.23 335);   /* text-safe on page: 5.6:1 */
+      --magenta-deep:oklch(0.42 0.19 335);   /* the band */
+      --on-ink:      oklch(0.95 0.01 300);
+      --on-ink-dim:  oklch(0.72 0.02 290);   /* 7.4:1 on ink */
+      --on-magenta:  oklch(0.985 0.005 330);
+      --on-magenta-dim: oklch(0.90 0.05 335);
+
+      --font-slab: 'Zilla Slab', 'Rockwell', 'Roboto Slab', Georgia, serif;
+      --font-mono: 'Red Hat Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+      --text-sm:  clamp(0.875rem, 0.84rem + 0.2vw, 0.95rem);
+      --text:     clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+      --text-lg:  clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+      --text-h2:  clamp(1.9rem, 1.4rem + 2.2vw, 3rem);
+      --text-h1:  clamp(2.5rem, 1.6rem + 4.2vw, 5.25rem);
+
+      --gutter: clamp(1.25rem, 4vw, 3.5rem);
+      --max: 76rem;
+
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --dur-ui: 140ms;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink-text);
+      font-family: var(--font-slab);
+      font-size: var(--text);
+      line-height: 1.5;
+      text-rendering: optimizeLegibility;
+    }
+    h1, h2, h3 { font-weight: 700; line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; color: var(--ink); }
+    p { margin: 0; text-wrap: pretty; }
+    a { color: var(--magenta-ink); text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+    a:hover { color: var(--ink); }
+    :focus-visible { outline: 3px solid var(--magenta); outline-offset: 3px; border-radius: 2px; }
+    code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+    .container { width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; }
+    .skip-link { position: absolute; left: 0.5rem; top: -4rem; background: var(--ink); color: var(--on-ink); padding: 0.6rem 1rem; z-index: 100; font-family: var(--font-mono); }
+    .skip-link:focus { top: 0.5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* ───────────────────────── header ───────────────────────── */
+    .site-header { padding-block: 1.1rem; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+    .brand { display: inline-flex; align-items: center; gap: 0.7rem; text-decoration: none; color: var(--ink); }
+    .brand-chip { width: 2.25rem; height: 2.25rem; background: var(--ink); display: grid; place-items: center; border-radius: 4px; }
+    .brand-chip img { width: 1.85rem; height: 1.85rem; display: block; }
+    .brand-name { font-family: var(--font-mono); font-weight: 500; font-size: 1.05rem; letter-spacing: 0.01em; }
+    .site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: clamp(0.9rem, 2.5vw, 2rem); flex-wrap: wrap; justify-content: flex-end; }
+    .site-nav a { color: var(--ink-text); text-decoration: none; font-weight: 600; font-size: var(--text-sm); border-bottom: 2px solid transparent; padding-bottom: 2px; transition: border-color var(--dur-ui) ease, color var(--dur-ui) ease; }
+    @media (hover:hover) { .site-nav a:hover { border-color: var(--magenta); color: var(--ink); } }
+    .site-nav a[aria-current] { border-color: var(--magenta); }
+    .nav-ext::after { content: " ↗"; font-family: var(--font-mono); font-weight: 400; }
+    @media (max-width: 640px) { .site-nav li:nth-child(-n+3) { display: none; } }
+
+    /* ───────────────────────── hero ───────────────────────── */
+    .hero { padding-block: clamp(2.5rem, 7vw, 6rem) 0; }
+    .hero-grid { display: grid; gap: 2.5rem; align-items: start; }
+    @media (min-width: 900px) {
+      .hero-grid { grid-template-columns: 5fr 7fr; gap: clamp(2rem, 4vw, 4rem); }
+      .hero-copy { padding-top: 1.5rem; }
+    }
+    .hero h1 { font-size: var(--text-h1); letter-spacing: -0.02em; max-width: 12ch; }
+    .hero h1 .u { text-decoration: underline; text-decoration-color: var(--magenta); text-decoration-thickness: 0.08em; text-underline-offset: 0.09em; }
+    .lead { font-size: var(--text-lg); line-height: 1.4; margin-top: 1.5rem; max-width: 36ch; color: var(--ink-text); }
+    .status { margin-top: 1.75rem; font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.55; color: var(--muted); max-width: 44ch; border-top: 1px solid var(--rule); padding-top: 1rem; }
+    .status b { color: var(--ink); font-weight: 500; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 1.75rem; align-items: center; }
+    .button { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.8rem 1.25rem; font-weight: 700; font-size: 1rem; text-decoration: none; border-radius: 3px; border: 2px solid transparent; transition: background-color var(--dur-ui) ease, color var(--dur-ui) ease, border-color var(--dur-ui) ease, transform var(--dur-ui) ease; }
+    .button:active { transform: translateY(1px); }
+    .button-primary { background: var(--magenta-ink); color: var(--on-magenta); }   /* 6.1:1; the hot magenta (4.4:1) stays for rules, focus and the + lines */
+    @media (hover:hover) { .button-primary:hover { background: var(--magenta-deep); color: var(--on-magenta); } }
+    .button-ghost { color: var(--ink); border-color: var(--ink); background: transparent; }
+    @media (hover:hover) { .button-ghost:hover { background: var(--ink); color: var(--on-ink); } }
+
+    /* the plate — the signature */
+    .plate {
+      position: relative;
+      background: var(--ink);
+      color: var(--on-ink);
+      padding: clamp(1.1rem, 2.4vw, 2rem) clamp(1.1rem, 2.6vw, 2.25rem) clamp(1.5rem, 3vw, 2.5rem);
+      border-radius: 6px 6px 0 0;
+      font-family: var(--font-mono);
+      overflow: hidden;
+      margin: 0 0 -6rem;                 /* the grid break: crosses into §why */
+      z-index: 1;
+    }
+    @media (min-width: 1100px) {
+      .plate { margin-right: calc(-1 * max(var(--gutter), (100vw - var(--max)) / 2)); border-radius: 6px 0 0 0; padding-right: max(var(--gutter), (100vw - var(--max)) / 2); }
+    }
+    .plate-head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; font-size: var(--text-sm); color: var(--on-ink-dim); border-bottom: 1px solid var(--ink-2); padding-bottom: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .plate-head .file { color: var(--on-ink); font-weight: 500; overflow-wrap: anywhere; }
+    .plate-head .delta { white-space: nowrap; }
+    .plate-head .delta ins { color: oklch(0.78 0.18 335); text-decoration: none; }
+    .diff { margin: 0; font-size: clamp(0.78rem, 0.66rem + 0.42vw, 0.95rem); line-height: 1.5; overflow-x: auto; tab-size: 2; }
+    .diff .l { display: block; white-space: pre; padding-left: 1.6em; text-indent: -1.6em; }
+    .diff .l::before { content: "  "; display: inline-block; width: 1.6em; text-indent: 0; color: var(--on-ink-dim); }
+    .diff .c { color: var(--on-ink-dim); }
+    .diff .a { color: oklch(0.86 0.09 335); }
+    .diff .a::before { content: "+ "; color: oklch(0.78 0.22 335); font-weight: 700; }
+    .diff .k { color: var(--on-ink); }
+    .diff .a .k { color: oklch(0.97 0.02 335); font-weight: 500; }
+    .plate-foot { margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--ink-2); display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: var(--text-sm); color: var(--on-ink-dim); }
+    .plate-foot .ok { color: var(--on-ink); }
+    .plate-foot .ok::before { content: "✓ "; color: oklch(0.78 0.22 335); }
+    .plate-mark { position: absolute; right: clamp(0.75rem, 2.5vw, 2rem); bottom: 4.6rem; width: clamp(6rem, 12vw, 10rem); height: auto; opacity: 0.95; pointer-events: none; }
+    @media (max-width: 899px) { .plate-mark { display: none; } }
+
+    /* ───────────────────────── why ───────────────────────── */
+    .why { background: var(--page-deep); padding-block: clamp(8rem, 12vw, 11rem) clamp(3.5rem, 6vw, 5.5rem); }
+    .why-grid { display: grid; gap: 2rem; }
+    @media (min-width: 900px) { .why-grid { grid-template-columns: 4fr 8fr; gap: 4rem; } }
+    .why h2 { font-size: var(--text-h2); }
+    .why .intro { font-size: var(--text-lg); line-height: 1.45; max-width: 60ch; }
+    .facts { margin: 3rem 0 0; display: grid; gap: 0; border-top: 1px solid var(--rule); }
+    .fact { display: grid; gap: 0.4rem 2rem; padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+    @media (min-width: 700px) { .fact { grid-template-columns: minmax(12rem, 1fr) 2fr; } }
+    .fact dt { font-weight: 700; font-size: var(--text-lg); line-height: 1.2; color: var(--ink); }
+    .fact dd { margin: 0; max-width: 60ch; }
+    .fact dd .ref { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); white-space: nowrap; }
+
+    /* ───────────────────────── data path (the band) ───────────────────────── */
+    .path { background: var(--magenta-deep); color: var(--on-magenta); padding-block: clamp(3.5rem, 7vw, 6rem); }
+    .path h2 { color: var(--on-magenta); font-size: var(--text-h2); }
+    .path-head { display: grid; gap: 1rem 4rem; align-items: end; }
+    @media (min-width: 900px) { .path-head { grid-template-columns: 1fr 1fr; } }
+    .path-head p { max-width: 54ch; color: var(--on-magenta-dim); }
+    .path-head p b { color: var(--on-magenta); font-weight: 600; }
+    .path a { color: var(--on-magenta); }
+    .pipeline { margin: 2.5rem 0 0; overflow-x: auto; padding-bottom: 0.5rem; }
+    .pipeline svg { display: block; width: 100%; min-width: 820px; height: auto; font-family: var(--font-mono); }
+    .pipeline .box { fill: none; stroke: var(--on-magenta); stroke-width: 1.5; }
+    .pipeline .box-solid { fill: var(--on-magenta); stroke: none; }
+    .pipeline .wire { fill: none; stroke: var(--on-magenta); stroke-width: 1.5; }
+    .pipeline .wire-drop { stroke-dasharray: 4 4; }
+    .pipeline text { fill: var(--on-magenta); font-size: 13px; }
+    .pipeline .t-ink { fill: var(--magenta-deep); font-weight: 700; }
+    .pipeline .t-dim { fill: var(--on-magenta-dim); font-size: 11.5px; }
+    .pipeline .t-big { font-family: var(--font-slab); font-size: 17px; font-weight: 700; }
+    .path-notes { margin-top: 2rem; display: grid; gap: 0.8rem 3rem; font-size: var(--text-sm); color: var(--on-magenta-dim); max-width: 70rem; }
+    @media (min-width: 900px) { .path-notes { grid-template-columns: 1fr 1fr 1fr; } }
+    .path-notes b { color: var(--on-magenta); font-weight: 600; display: block; font-size: var(--text); }
+
+    /* ───────────────────────── how it's built ───────────────────────── */
+    .built { padding-block: clamp(3.5rem, 7vw, 6rem); }
+    .built h2 { font-size: var(--text-h2); max-width: 20ch; }
+    .built .intro { margin-top: 1rem; max-width: 62ch; font-size: var(--text-lg); line-height: 1.45; }
+    .artefacts { width: 100%; border-collapse: collapse; margin-top: 2.5rem; font-size: var(--text-sm); }
+    .artefacts caption { text-align: left; font-family: var(--font-mono); color: var(--muted); font-size: 0.85rem; padding-bottom: 0.6rem; }
+    .artefacts th, .artefacts td { text-align: left; vertical-align: top; padding: 0.85rem 1rem 0.85rem 0; border-bottom: 1px solid var(--rule); }
+    .artefacts thead th { font-family: var(--font-mono); font-weight: 500; color: var(--muted); font-size: 0.8rem; letter-spacing: 0.02em; border-bottom: 1px solid var(--ink); }
+    .artefacts tbody th { font-weight: 700; color: var(--ink); font-size: var(--text); width: 22%; }
+    .artefacts tbody th a { color: inherit; text-decoration-color: var(--rule); }
+    .artefacts tbody th a:hover { text-decoration-color: var(--magenta); }
+    .artefacts td.state { font-family: var(--font-mono); font-size: 0.82rem; white-space: nowrap; width: 20%; color: var(--ink); }
+    .artefacts td.state i { font-style: normal; color: var(--muted); display: block; }
+    .artefacts tr:last-child td, .artefacts tr:last-child th { border-bottom: 1px solid var(--ink); }
+    @media (max-width: 700px) {
+      .artefacts thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .artefacts tr { display: grid; grid-template-columns: 1fr; padding: 1rem 0; border-bottom: 1px solid var(--rule); }
+      .artefacts th, .artefacts td { border: 0; padding: 0.15rem 0; width: auto !important; }
+      .artefacts td.state { white-space: normal; }
+      .artefacts td.state i { display: inline; } .artefacts td.state i::before { content: " · "; }
+    }
+    .note { margin-top: 3rem; border: 1px solid var(--ink); padding: 1.4rem 1.6rem; max-width: 62ch; }
+    .note h3 { font-size: var(--text-lg); margin-bottom: 0.5rem; }
+    .note p + p { margin-top: 0.6rem; }
+
+    /* ───────────────────────── contribute ───────────────────────── */
+    .contribute { padding-block: clamp(3.5rem, 7vw, 6rem); border-top: 1px solid var(--rule); }
+    .contribute-grid { display: grid; gap: 2rem; }
+    @media (min-width: 900px) { .contribute-grid { grid-template-columns: 5fr 7fr; gap: 4rem; } }
+    .contribute h2 { font-size: var(--text-h2); }
+    .contribute .cta-row { margin-top: 1.5rem; }
+    .asks { list-style: none; margin: 0; padding: 0; }
+    .asks li { padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+    .asks li:first-child { border-top: 1px solid var(--rule); }
+    .asks b { color: var(--ink); font-weight: 700; display: block; font-size: var(--text-lg); line-height: 1.25; margin-bottom: 0.25rem; }
+    .asks p { max-width: 58ch; }
+
+    /* ───────────────────────── footer ───────────────────────── */
+    .site-footer { background: var(--ink); color: var(--on-ink-dim); padding-block: clamp(2.5rem, 5vw, 4rem) 2rem; font-size: var(--text-sm); }
+    .footer-grid { display: grid; gap: 2rem; }
+    @media (min-width: 700px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; } }
+    .site-footer h2 { color: var(--on-ink); font-family: var(--font-mono); font-weight: 500; font-size: 0.85rem; letter-spacing: 0.02em; margin-bottom: 0.9rem; }
+    .site-footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+    .site-footer a { color: var(--on-ink); text-decoration-color: var(--ink-2); }
+    .site-footer a:hover { text-decoration-color: var(--magenta); color: var(--on-ink); }
+    .footer-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+    .footer-brand img { width: 3rem; height: 3rem; }
+    .footer-brand span { font-family: var(--font-mono); font-size: 1.1rem; color: var(--on-ink); }
+    .footer-tagline { margin-top: 1rem; max-width: 36ch; }
+    .footer-bottom { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--ink-2); display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; font-family: var(--font-mono); font-size: 0.8rem; }
+
+    /* ───────────────────────── motion: enhance, never gate ───────────────────────── */
+    .js .diff .a { opacity: 0; transform: translateY(6px); }
+    .js .diff.is-in .a { opacity: 1; transform: none; transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); }
+    .js .diff.is-in .a:nth-of-type(1) { transition-delay: 60ms; } .js .diff.is-in .a:nth-of-type(2) { transition-delay: 120ms; }
+    .js .diff.is-in .a:nth-of-type(3) { transition-delay: 180ms; } .js .diff.is-in .a:nth-of-type(4) { transition-delay: 240ms; }
+    .js .diff.is-in .a:nth-of-type(5) { transition-delay: 300ms; } .js .diff.is-in .a:nth-of-type(6) { transition-delay: 360ms; }
+    .js .diff.is-in .a:nth-of-type(7) { transition-delay: 420ms; }
+    .js .pipeline .wire { stroke-dasharray: 700; stroke-dashoffset: 700; }
+    /* 900ms: an explanatory sequence (motion.md: marketing sequences may exceed 300ms) — the wires are the content being explained */
+    .js .pipeline.is-in .wire { stroke-dashoffset: 0; transition: stroke-dashoffset 900ms var(--ease-out); }
+    .js .pipeline.is-in .wire:nth-of-type(2) { transition-delay: 150ms; } .js .pipeline.is-in .wire:nth-of-type(3) { transition-delay: 300ms; }
+    .js .pipeline.is-in .wire:nth-of-type(4) { transition-delay: 450ms; } .js .pipeline.is-in .wire:nth-of-type(5) { transition-delay: 600ms; }
+    .js .pipeline.is-in .wire:nth-of-type(6) { transition-delay: 750ms; }
+    @media (prefers-reduced-motion: reduce) {
+      .js .diff .a, .js .pipeline .wire { opacity: 1; transform: none; stroke-dashoffset: 0; transition: none; }
+      .button, .site-nav a { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="Songbird home">
+        <span class="brand-chip" aria-hidden="true"><img src="assets/songbird-mark.png" alt="" width="256" height="256"></span>
+        <span class="brand-name">songbird</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#why">Why</a></li>
+          <li><a href="#path">Data path</a></li>
+          <li><a href="#built">How it is built</a></li>
+          <li><a href="#contribute">Contribute</a></li>
+          <li><a class="nav-ext" href="https://github.com/songbird-fw/songbird-fw" rel="noopener">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ── hero ── -->
+    <section class="hero" id="top" aria-labelledby="h1">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <h1 id="h1">A firewall you <span class="u">review</span> like code.</h1>
+          <p class="lead">Songbird is an open-source network firewall for Linux. Policy is YAML in a Git repository, the data plane is eBPF on the NIC, and a change reaches production the way code does: as a validated, reviewed commit.</p>
+          <p class="status"><b>Status:</b> design phase, no release yet. The requirements, the architecture, eighteen decision records and the configuration schema are public; the code is written as a consequence of those documents.</p>
+          <div class="cta-row">
+            <a class="button button-primary" href="https://github.com/songbird-fw/songbird-fw#readme" rel="noopener">Read the design documents</a>
+            <a class="button button-ghost" href="https://github.com/songbird-fw/songbird-fw" rel="noopener">Follow on GitHub</a>
+          </div>
+        </div>
+
+        <figure class="plate" aria-label="A Songbird RuleSet change, shown as a reviewed diff">
+          <div class="plate-head">
+            <span class="file"><span class="mono">rulesets/internal-to-untrusted.yaml</span></span>
+            <span class="delta"><ins>+7</ins> −0</span>
+          </div>
+          <pre class="diff" aria-describedby="diff-desc"><span class="l c"><span class="k">apiVersion</span>: "config.songbird-fw.com/v1alpha1"</span><span class="l c"><span class="k">kind</span>: "RuleSet"</span><span class="l c"><span class="k">metadata</span>:</span><span class="l c">  <span class="k">name</span>: "internal-to-untrusted"</span><span class="l c"><span class="k">spec</span>:</span><span class="l c">  <span class="k">from</span>: "internal"</span><span class="l c">  <span class="k">to</span>: "untrusted"</span><span class="l c">  <span class="k">rules</span>:</span><span class="l c">    - <span class="k">name</span>: "block-printers-internet"</span><span class="l c">      <span class="k">source</span>: ["printers"]</span><span class="l c">      <span class="k">action</span>: "drop"</span><span class="l c">      <span class="k">log</span>: "all"</span><span class="l a">    - <span class="k">name</span>: "lan-web-dns"</span><span class="l a">      <span class="k">comment</span>: "Only web, DNS and ping out"</span><span class="l a">      <span class="k">source</span>: ["grp-lan"]</span><span class="l a">      <span class="k">destination</span>: ["any"]</span><span class="l a">      <span class="k">service</span>: ["web", "dns", "ping"]</span><span class="l a">      <span class="k">action</span>: "accept"</span><span class="l a">      <span class="k">nat</span>: { <span class="k">type</span>: "snat" }</span></pre>
+          <figcaption class="plate-foot" id="diff-desc">
+            <span class="ok">schema: 43 objects, 0 errors</span>
+            <span class="ok">2 approvals</span>
+            <span>merge applies the RuleSet atomically</span>
+          </figcaption>
+          <img class="plate-mark" src="assets/songbird-mark.png" alt="" width="256" height="256" fetchpriority="high">
+        </figure>
+      </div>
+    </section>
+
+    <!-- ── why ── -->
+    <section class="why" id="why" aria-labelledby="why-h">
+      <div class="container why-grid">
+        <h2 id="why-h">Why another firewall</h2>
+        <div>
+          <p class="intro">Community firewalls ask you to click through a web interface and trust that the last backup is recent. Enterprise platforms give you clean operations and charge per seat, per feature, per year. Songbird keeps the operational model of the enterprise appliance (zones, named objects, one RuleSet per zone pair, first match wins) and puts it in files you can diff, review, and revert.</p>
+          <dl class="facts">
+            <div class="fact">
+              <dt>Default deny, written down</dt>
+              <dd>Traffic between two zones is dropped unless a RuleSet says otherwise. An empty RuleSet is a valid, explicit statement (<code>rules: []</code>), and the schema ships a negative corpus of 49 configurations that must fail validation. <span class="ref">schema/examples/invalid</span></dd>
+            </div>
+            <div class="fact">
+              <dt>eBPF on the interface</dt>
+              <dd>XDP decides, the kernel forwards, TC rewrites. A dropped packet never becomes a socket buffer; NAT happens on the hooks that can see both directions. Connection tracking is Songbird's own, so a policy change can decide what happens to flows that are already open. <span class="ref">ADR-0002 · ADR-0003 · ADR-0004</span></dd>
+            </div>
+            <div class="fact">
+              <dt>Rollback is <code>git revert</code></dt>
+              <dd>The applied configuration is a commit. The schema is versioned (<code>config.songbird-fw.com/v1alpha1</code>) with conversion rules, so a previous commit is always loadable, and the appliance image is A/B updatable. <span class="ref">ADR-0001 · ADR-0008 · ADR-0017</span></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── data path ── -->
+    <section class="path" id="path" aria-labelledby="path-h">
+      <div class="container">
+        <div class="path-head">
+          <h2 id="path-h">Where the packet goes</h2>
+          <p>Every IPv4 frame on a physical interface is parsed, pre-filtered, matched against connection tracking and classified in <b>XDP</b>, before the kernel allocates anything for it. Only accepted packets continue into the stack; NAT is applied by <b>TC</b> programs that read the decision XDP left in packet metadata, so nothing is looked up twice.</p>
+        </div>
+
+        <figure class="pipeline" aria-label="Packet pipeline: NIC, XDP ingress, TC ingress, kernel forwarding, TC egress, NIC">
+          <svg viewBox="0 0 1320 340" role="img" aria-labelledby="pipe-t">
+            <title id="pipe-t">NIC in → XDP ingress (parse, prefilter, conntrack, policy) → XDP_PASS with metadata → TC ingress (DNAT, reverse SNAT) → kernel forwarding → TC egress (SNAT) → NIC out. XDP_DROP leaves the pipeline with an event.</title>
+            <rect class="box-solid" x="0" y="120" width="110" height="60" rx="3"/>
+            <text class="t-ink" x="55" y="146" text-anchor="middle">NIC</text>
+            <text class="t-ink" x="55" y="164" text-anchor="middle" style="font-weight:400">ingress</text>
+
+            <rect class="box" x="150" y="40" width="490" height="210" rx="3"/>
+            <text class="t-big" x="170" y="72">XDP</text>
+            <text class="t-dim" x="220" y="72">ingress · physical interface</text>
+            <rect class="box" x="170" y="95" width="95" height="46" rx="2"/><text x="217" y="123" text-anchor="middle">parse</text>
+            <rect class="box" x="280" y="95" width="105" height="46" rx="2"/><text x="332" y="123" text-anchor="middle">prefilter</text>
+            <rect class="box" x="400" y="95" width="115" height="46" rx="2"/><text x="457" y="123" text-anchor="middle">conntrack</text>
+            <rect class="box" x="530" y="95" width="90" height="46" rx="2"/><text x="575" y="123" text-anchor="middle">policy</text>
+            <text class="t-dim" x="170" y="180">VLAN · PPPoE · IPv4 only</text>
+            <text class="t-dim" x="170" y="203">established → pass · new → RuleSet(from, to)</text>
+            <text class="t-dim" x="170" y="226">first match wins · decision + NAT flags → XDP metadata</text>
+
+            <text class="t-dim" x="680" y="136" text-anchor="middle">XDP_PASS</text>
+            <text class="t-dim" x="680" y="176" text-anchor="middle">+ metadata</text>
+
+            <rect class="box" x="720" y="120" width="160" height="60" rx="3"/>
+            <text x="800" y="144" text-anchor="middle">TC ingress</text>
+            <text class="t-dim" x="800" y="163" text-anchor="middle">DNAT · reverse SNAT</text>
+            <rect class="box" x="910" y="120" width="140" height="60" rx="3"/>
+            <text x="980" y="144" text-anchor="middle">kernel</text>
+            <text class="t-dim" x="980" y="163" text-anchor="middle">routing · forward</text>
+            <rect class="box" x="1080" y="120" width="90" height="60" rx="3"/>
+            <text x="1125" y="144" text-anchor="middle">TC egress</text>
+            <text class="t-dim" x="1125" y="163" text-anchor="middle">SNAT</text>
+            <rect class="box-solid" x="1200" y="120" width="110" height="60" rx="3"/>
+            <text class="t-ink" x="1255" y="146" text-anchor="middle">NIC</text>
+            <text class="t-ink" x="1255" y="164" text-anchor="middle" style="font-weight:400">egress</text>
+
+            <rect class="box-solid" x="220" y="268" width="120" height="40" rx="3"/>
+            <text class="t-ink" x="280" y="293" text-anchor="middle">XDP_DROP</text>
+            <text class="t-dim" x="220" y="330">+ event → ring buffer · ipv6, no RuleSet, policy drop</text>
+
+            <path class="wire" d="M110 150 H150"/>
+            <path class="wire" d="M265 118 H280 M385 118 H400 M515 118 H530"/>
+            <path class="wire" d="M640 150 H720 M710 142 l10 8 l-10 8"/>
+            <path class="wire" d="M880 150 H910 M1050 150 H1080 M1170 150 H1200"/>
+            <path class="wire wire-drop" d="M575 141 V162 H632 V288 H340"/>
+            <path class="wire" d="M350 280 l-10 8 l10 8"/>
+          </svg>
+        </figure>
+
+        <div class="path-notes">
+          <p><b>Kernel 6.6 or newer.</b> TC programs attach with TCX (link-managed, ordered, detachable without qdisc surgery); XDP native where the driver supports it, generic as the fallback. <a href="https://github.com/songbird-fw/songbird-fw/blob/main/adr/0013-minimum-kernel-and-attach-method.md" rel="noopener">ADR-0013</a></p>
+          <p><b>Atomic apply.</b> A new configuration is compiled into a fresh generation of maps and switched in one step; flows that no longer match a rule are handled according to the policy-change decision, not left to time out silently. <a href="https://github.com/songbird-fw/songbird-fw/blob/main/adr/0004-active-flows-on-policy-change.md" rel="noopener">ADR-0004</a></p>
+          <p><b>Honest scope.</b> IPv6 is deferred to a later release and is <em>dropped</em>, with an event, rather than passed through unfiltered. FQDN objects are accepted by the schema but cannot yet be enabled in a rule. <a href="https://github.com/songbird-fw/songbird-fw/blob/main/docs/architecture/dataplane.md" rel="noopener">Data plane design</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── how it's built ── -->
+    <section class="built" id="built" aria-labelledby="built-h">
+      <div class="container">
+        <h2 id="built-h">Documents first, then code</h2>
+        <p class="intro">The repository ships its reasoning before its binaries. Every artefact below exists today, is versioned, and changes through pull requests like everything else will.</p>
+
+        <table class="artefacts">
+          <caption>songbird-fw/songbird-fw · state as of October 2026</caption>
+          <thead>
+            <tr><th scope="col">Artefact</th><th scope="col">What it fixes</th><th scope="col">State</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row"><a href="https://github.com/songbird-fw/songbird-fw/blob/main/docs/requirements-analysis.md" rel="noopener">Requirements Analysis</a></th>
+              <td>Stakeholders, glossary, constraints, 90-odd requirements each with a verification criterion, explicit exclusions, traceability.</td>
+              <td class="state">2.0.6-draft <i>in team review</i></td>
+            </tr>
+            <tr>
+              <th scope="row"><a href="https://github.com/songbird-fw/songbird-fw/blob/main/docs/project-plan.md" rel="noopener">Project Plan</a></th>
+              <td>Release roadmap, scope of MVP 0.1, milestones, work breakdown, risks, process rules.</td>
+              <td class="state">0.2.2-draft <i>for team decision</i></td>
+            </tr>
+            <tr>
+              <th scope="row"><a href="https://github.com/songbird-fw/songbird-fw/tree/main/docs/architecture" rel="noopener">Architecture</a></th>
+              <td>Domain model, component view, reconciliation loop, eBPF data plane with its pipeline, conntrack and NAT design.</td>
+              <td class="state">data plane 3.3-draft <i>for review</i></td>
+            </tr>
+            <tr>
+              <th scope="row"><a href="https://github.com/songbird-fw/songbird-fw/tree/main/adr" rel="noopener">Decision records</a></th>
+              <td>18 ADRs, one file per decision, never deleted: YAML in Git as source of truth, forwarding model, own conntrack, kernel floor, Go control plane, cilium/ebpf, Hadron as appliance OS, CRD-style objects.</td>
+              <td class="state">7 accepted <i>11 proposed</i></td>
+            </tr>
+            <tr>
+              <th scope="row"><a href="https://github.com/songbird-fw/songbird-fw/tree/main/schema" rel="noopener">Configuration schema</a></th>
+              <td>JSON Schema 2020-12 for <code>config.songbird-fw.com/v1alpha1</code>: Address, AddressGroup, Service, Interface, Zone, RuleSet, Color, System. Example configuration and a negative corpus.</td>
+              <td class="state">43 valid objects <i>49 cases that must fail</i></td>
+            </tr>
+            <tr>
+              <th scope="row"><a href="https://github.com/songbird-fw/songbird-fw/blob/main/docs/test-plan.md" rel="noopener">Test Plan</a></th>
+              <td>How each requirement is verified: unit, eBPF, integration, benchmark; the coverage matrix from requirement to test.</td>
+              <td class="state">0.1.1-draft <i>milestone M0</i></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <aside class="note" aria-labelledby="ai-h">
+          <h3 id="ai-h">On the use of AI</h3>
+          <p>Requirements, architecture and decisions are written and reviewed by people. AI tools implement what has already been specified; they do not take design decisions, and their output goes through the same review as anyone else's.</p>
+          <p>This is a deliberate constraint, not a disclaimer: it keeps the codebase a consequence of the documents rather than of a prompt.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ── contribute ── -->
+    <section class="contribute" id="contribute" aria-labelledby="contrib-h">
+      <div class="container contribute-grid">
+        <div>
+          <h2 id="contrib-h">Where help is useful right now</h2>
+          <p class="intro" style="margin-top:1rem">No code to compile yet means the most valuable contributions are the ones that are usually hardest to get: a second pair of eyes on a decision, a configuration that should not validate, a NIC that does not behave.</p>
+          <div class="cta-row">
+            <a class="button button-primary" href="https://github.com/songbird-fw/songbird-fw/issues" rel="noopener">Open the issue tracker</a>
+            <a href="mailto:contact@songbird-fw.com">contact@songbird-fw.com</a>
+          </div>
+        </div>
+        <ul class="asks">
+          <li><b>Review a proposed ADR</b><p>Eleven decisions are still proposed. The kernel floor (ADR-0013), the DHCP and DNS engines (ADR-0014) and the capacity limits (ADR-0006) want opinions from people who run networks.</p></li>
+          <li><b>Break the schema</b><p>Write a configuration that should be rejected and is not. Each one becomes a numbered case in <code>schema/examples/invalid</code> and a test the validator must keep failing.</p></li>
+          <li><b>Report your hardware</b><p>Native XDP depends on the NIC driver. Which cards and kernels you run, and what <code>ethtool</code> says about them, is the evidence behind the reference platform (ADR-0007).</p></li>
+          <li><b>Edit the documents</b><p>Right now the documents are the product. An ambiguous requirement or a diagram that does not match the text is a real bug; file it like one.</p></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a class="footer-brand" href="#top"><img src="assets/songbird-mark.png" alt="" width="256" height="256" loading="lazy"><span>songbird</span></a>
+          <p class="footer-tagline">An open-source network firewall for Linux: YAML in Git, eBPF on the wire, reviewed like code.</p>
+          <p class="footer-tagline">Released under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">GNU AGPL-3.0</a>.</p>
+        </div>
+        <nav aria-labelledby="f-project">
+          <h2 id="f-project">Project</h2>
+          <ul>
+            <li><a href="https://github.com/songbird-fw/songbird-fw" rel="noopener">Main repository</a></li>
+            <li><a href="https://github.com/songbird-fw/songbird-fw/tree/main/adr" rel="noopener">Decision records</a></li>
+            <li><a href="https://github.com/songbird-fw/songbird-fw/tree/main/schema" rel="noopener">Configuration schema</a></li>
+            <li><a href="https://github.com/songbird-fw/songbird-prototypes" rel="noopener">Prototypes (archived)</a></li>
+          </ul>
+        </nav>
+        <nav aria-labelledby="f-contribute">
+          <h2 id="f-contribute">Contribute</h2>
+          <ul>
+            <li><a href="https://github.com/songbird-fw/songbird-fw/issues" rel="noopener">Issues</a></li>
+            <li><a href="https://github.com/songbird-fw/songbird-fw/pulls" rel="noopener">Pull requests</a></li>
+            <li><a href="https://github.com/songbird-fw" rel="noopener">GitHub organisation</a></li>
+          </ul>
+        </nav>
+        <nav aria-labelledby="f-contact">
+          <h2 id="f-contact">Contact</h2>
+          <ul>
+            <li><a href="mailto:contact@songbird-fw.com">contact@songbird-fw.com</a></li>
+            <li><a href="https://github.com/songbird-fw/songbird-site" rel="noopener">This site's source</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Songbird contributors</span>
+        <span>songbird-fw.org · songbird-fw.com · songbird-fw.net</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      if (!('IntersectionObserver' in window)) return;
+      document.documentElement.classList.add('js');
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var targets = document.querySelectorAll('.diff, .pipeline');
+      if (reduce) { targets.forEach(function (t) { t.classList.add('is-in'); }); return; }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.35 });
+      targets.forEach(function (t) { io.observe(t); });
+    })();
+  </script>
+</body>
+</html>
